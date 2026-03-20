@@ -6,6 +6,18 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>FormFlow.Components</RootNamespace>
     <AssemblyName>FormFlow.Components</AssemblyName>
+
+    <!-- NuGet package metadata -->
+    <PackageId>FormFlow.Components</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>alborzmgm</Authors>
+    <Description>Blazor Razor component library for FormFlow — a JSON-driven, multi-step form workflow library for ASP.NET Core. Contains DynamicForm, all built-in field components, and the custom field-type registry.</Description>
+    <PackageTags>blazor;forms;workflow;json;aspnetcore;razor-components</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/alborzmgm/formflow</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/alborzmgm/formflow</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,6 +26,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FormFlow.Core\FormFlow.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>
