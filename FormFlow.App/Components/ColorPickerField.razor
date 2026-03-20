@@ -1,0 +1,52 @@
+@namespace FormFlow.App.Components
+@inherits FormFlow.Components.FieldComponentBase
+
+@* Example custom field component — registered via AddCustomFieldType<ColorPickerField>("color").
+   Demonstrates that any Blazor component inheriting FieldComponentBase can be plugged in
+   as a first-class field type without modifying FormFlow.Components. *@
+
+<div class="mb-3">
+    <label class="form-label" for="@_id">
+        @Field.Label
+        @if (Field.Required)
+        {
+            <span class="text-danger ms-1" title="Required">*</span>
+        }
+    </label>
+
+    <div class="d-flex align-items-center gap-2">
+        <input id="@_id"
+               type="color"
+               class="form-control form-control-color @(ValidationErrors.Count > 0 ? "is-invalid" : "")"
+               style="width:3rem;height:2.5rem;"
+               value="@_colorValue"
+               title="@Field.Label"
+               @onchange="HandleChange" />
+        <span class="form-text mb-0 text-muted">@_colorValue</span>
+    </div>
+
+    @foreach (var error in ValidationErrors)
+    {
+        <div class="invalid-feedback d-block">
+            <i class="bi bi-exclamation-circle-fill me-1"></i>@error
+        </div>
+    }
+</div>
+
+@code {
+    private string _id         = string.Empty;
+    private string _colorValue = "#000000";
+
+    protected override void OnInitialized() => _id = $"field-{Field.Key.ToLowerInvariant()}";
+
+    protected override void OnParametersSet()
+    {
+        _colorValue = Value is string s && s.Length > 0 ? s : "#000000";
+    }
+
+    private async Task HandleChange(ChangeEventArgs e)
+    {
+        _colorValue = e.Value?.ToString() ?? "#000000";
+        await OnValueChanged.InvokeAsync(_colorValue);
+    }
+}

@@ -1,0 +1,56 @@
+@namespace FormFlow.Components
+@using Microsoft.AspNetCore.Components.Forms
+@inherits FieldComponentBase
+
+<div class="mb-3">
+    <label class="form-label" for="@_id">
+        @Field.Label
+        @if (Field.Required)
+        {
+            <span class="text-danger ms-1" title="Required">*</span>
+        }
+    </label>
+
+    <InputFile id="@_id"
+               class="@_inputClass"
+               OnChange="HandleFileSelected" />
+
+    @if (_fileName is not null)
+    {
+        <div class="form-text text-success mt-1">
+            <i class="bi bi-file-earmark-check me-1"></i>@_fileName selected
+        </div>
+    }
+
+    @if (HasErrors)
+    {
+        <div class="invalid-feedback d-block">
+            @foreach (var e in ValidationErrors)
+            {
+                <div><i class="bi bi-exclamation-circle-fill me-1"></i>@e</div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private string  _id         = string.Empty;
+    private string? _fileName;
+    private string  _inputClass = "form-control";
+
+    private bool HasErrors => ValidationErrors.Count > 0;
+
+    protected override void OnInitialized() => _id = $"field-{Field.Key.ToLowerInvariant()}";
+
+    protected override void OnParametersSet()
+    {
+        _fileName   = Value is string s && s.Length > 0 ? s : null;
+        _inputClass = HasErrors ? "form-control is-invalid" : "form-control";
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        _fileName = e.File.Name;
+        await OnValueChanged.InvokeAsync(_fileName);
+    }
+}

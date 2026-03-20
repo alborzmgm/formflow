@@ -39,8 +39,9 @@ builder.Services.AddScoped<OptionService>();
 // DynamicForm can always resolve it, even when no custom types are needed.
 // To add a custom field type: create a Razor component that inherits
 // FieldComponentBase, then call AddCustomFieldType<T>() — nothing else changes.
+// The ColorPickerField below is a full working example of a custom field type.
 builder.Services.AddFormFlowComponents();
-builder.Services.AddCustomFieldType<DatePickerField>("date");
+builder.Services.AddCustomFieldType<ColorPickerField>("color");
 
 var app = builder.Build();
 

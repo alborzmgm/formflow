@@ -85,6 +85,8 @@ else
             "checkboxlist"      => typeof(CheckboxListField),
             "radiobuttonlist"   => typeof(RadioButtonListField),
             "repeater"          => typeof(RepeaterField),
+            "date"              => typeof(DatePickerField),
+            "fileupload"        => typeof(FileUploadField),
             _ => throw new NotSupportedException($"Unknown fieldType '{fieldType}'.")
         };
     }
@@ -98,6 +100,7 @@ else
         "text"   => "col-12 col-md-6",
         "number" => "col-12 col-md-6",
         "select" => "col-12 col-md-6",
+        "date"   => "col-12 col-md-6",
         _        => "col-12",
     };
 
