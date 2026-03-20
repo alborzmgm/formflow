@@ -1,5 +1,6 @@
 using FormFlow.App.Components;
 using FormFlow.App.Providers;
+using FormFlow.Components;
 using FormFlow.Core.Providers;
 using FormFlow.Core.Services;
 using FormFlow.Core.WorkflowEngine;
@@ -32,6 +33,14 @@ builder.Services.AddScoped<IDataSourceProvider, NewsletterTopicsProvider>();
 
 // ── Option Service ────────────────────────────────────────────────────────────
 builder.Services.AddScoped<OptionService>();
+
+// ── Custom Field Components ────────────────────────────────────────────
+// AddFormFlowComponents() registers the FieldComponentRegistry baseline so
+// DynamicForm can always resolve it, even when no custom types are needed.
+// To add a custom field type: create a Razor component that inherits
+// FieldComponentBase, then call AddCustomFieldType<T>() — nothing else changes.
+builder.Services.AddFormFlowComponents();
+builder.Services.AddCustomFieldType<DatePickerField>("date");
 
 var app = builder.Build();
 
