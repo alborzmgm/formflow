@@ -1,0 +1,49 @@
+name: Publish NuGet Packages
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore FormFlow.sln
+
+      - name: Build
+        run: dotnet build FormFlow.sln --configuration Release --no-restore
+
+      - name: Pack FormFlow.Core
+        run: >
+          dotnet pack FormFlow.Core/FormFlow.Core.csproj
+          --configuration Release
+          --no-build
+          --output ./nupkg
+          -p:Version=${{ github.event.release.tag_name }}
+
+      - name: Pack FormFlow.Components
+        run: >
+          dotnet pack FormFlow.Components/FormFlow.Components.csproj
+          --configuration Release
+          --no-build
+          --output ./nupkg
+          -p:Version=${{ github.event.release.tag_name }}
+
+      - name: Push to NuGet.org
+        run: >
+          dotnet nuget push ./nupkg/*.nupkg
+          --api-key ${{ secrets.NUGET_API_KEY }}
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
