@@ -70,12 +70,13 @@ else
     // then add one line here. Nothing else needs to change.
     private static Type Resolve(string fieldType) => fieldType switch
     {
-        "text"           => typeof(TextField),
-        "textarea"       => typeof(TextareaField),
-        "number"         => typeof(NumberField),
-        "select"         => typeof(SelectField),
-        "checkboxlist"   => typeof(CheckboxListField),
-        "repeater"       => typeof(RepeaterField),
+        "text"              => typeof(TextField),
+        "textarea"          => typeof(TextareaField),
+        "number"            => typeof(NumberField),
+        "select"            => typeof(SelectField),
+        "checkboxlist"      => typeof(CheckboxListField),
+        "radiobuttonlist"   => typeof(RadioButtonListField),
+        "repeater"          => typeof(RepeaterField),
         _ => throw new NotSupportedException($"Unknown fieldType '{fieldType}'.")
     };
 

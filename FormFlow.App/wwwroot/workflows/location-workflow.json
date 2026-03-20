@@ -208,7 +208,7 @@
         {
           "key": "NotificationFrequency",
           "label": "Notification Frequency",
-          "fieldType": "select",
+          "fieldType": "radiobuttonlist",
           "dataSource": "NotificationFrequency",
           "required": true,
           "order": 3,
