@@ -1,6 +1,7 @@
 @namespace FormFlow.Components
 
-@inject OptionService OptionService
+@inject OptionService           OptionService
+@inject FieldComponentRegistry  ComponentRegistry
 
 @if (UseColumnLayout)
 {
@@ -66,19 +67,29 @@ else
               .Select(f => f.Key);
 
     // ── Field type → component resolution ────────────────────────────────────
-    // To add a new field type: create XyzField.razor inheriting FieldComponentBase,
-    // then add one line here. Nothing else needs to change.
-    private static Type Resolve(string fieldType) => fieldType switch
+    // Built-in types are resolved by the switch below.
+    // Custom types registered via AddCustomFieldType<T>() are resolved first
+    // through the injected FieldComponentRegistry, so they can override or
+    // extend the built-in set without modifying this file.
+    private Type Resolve(string fieldType)
     {
-        "text"              => typeof(TextField),
-        "textarea"          => typeof(TextareaField),
-        "number"            => typeof(NumberField),
-        "select"            => typeof(SelectField),
-        "checkboxlist"      => typeof(CheckboxListField),
-        "radiobuttonlist"   => typeof(RadioButtonListField),
-        "repeater"          => typeof(RepeaterField),
-        _ => throw new NotSupportedException($"Unknown fieldType '{fieldType}'.")
-    };
+        if (ComponentRegistry.TryResolve(fieldType, out var customType))
+            return customType;
+
+        return fieldType switch
+        {
+            "text"              => typeof(TextField),
+            "textarea"          => typeof(TextareaField),
+            "number"            => typeof(NumberField),
+            "select"            => typeof(SelectField),
+            "checkboxlist"      => typeof(CheckboxListField),
+            "radiobuttonlist"   => typeof(RadioButtonListField),
+            "repeater"          => typeof(RepeaterField),
+            "date"              => typeof(DatePickerField),
+            "fileupload"        => typeof(FileUploadField),
+            _ => throw new NotSupportedException($"Unknown fieldType '{fieldType}'.")
+        };
+    }
 
     /// <summary>
     /// Returns Bootstrap column classes for a field when <see cref="UseColumnLayout"/> is true.
@@ -89,6 +100,7 @@ else
         "text"   => "col-12 col-md-6",
         "number" => "col-12 col-md-6",
         "select" => "col-12 col-md-6",
+        "date"   => "col-12 col-md-6",
         _        => "col-12",
     };
 

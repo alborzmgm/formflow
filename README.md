@@ -8,7 +8,8 @@
 
 - **100% JSON-driven forms** — add, remove, or reorder steps and fields by editing a single JSON file; no C# or Razor changes required.
 - **Multi-step wizard UI** — visual progress stepper, Back/Next/Submit navigation, and per-step validation.
-- **Rich field types** — `text`, `textarea`, `number`, `select`, `checkboxlist`, and `repeater` (nested, repeatable sub-forms).
+- **Rich field types** — `text`, `textarea`, `number`, `select`, `checkboxlist`, `radiobuttonlist`, `repeater`, `date`, and `fileupload`.
+- **Custom field components** — register any Blazor component as a new field type with a single `AddCustomFieldType<T>()` call; no library code changes required.
 - **Conditional visibility** — show or hide any field based on the value of another field using operators: `equals`, `notEquals`, `hasValue`, `isEmpty`, `contains`, `greaterThan`, `lessThan`.
 - **Cascading / dependent selects** — `select` fields can depend on a parent field; the option list reloads automatically when the parent value changes.
 - **Declarative validation** — attach any combination of rules to a field: `required`, `minLength`, `maxLength`, `min`, `max`, `regex`, `email`, `minItems`, `maxItems`, `minEntries`, `maxEntries`.
@@ -42,18 +43,26 @@ FormFlow.sln
 │       └── OptionItem.cs               # (Value, Label) pair
 │
 ├── FormFlow.Components/        # Blazor Razor component library
-│   └── Components/
-│       ├── DynamicForm.razor           # Renders a list of FieldDefinitions
-│       ├── FieldComponentBase.cs       # Shared base for all field components
-│       ├── TextField.razor
-│       ├── TextareaField.razor
-│       ├── NumberField.razor
-│       ├── SelectField.razor
-│       ├── CheckboxListField.razor
-│       └── RepeaterField.razor
+│   ├── Components/
+│   │   ├── DynamicForm.razor           # Renders a list of FieldDefinitions
+│   │   ├── FieldComponentBase.cs       # Shared base for all field components
+│   │   ├── TextField.razor
+│   │   ├── TextareaField.razor
+│   │   ├── NumberField.razor
+│   │   ├── SelectField.razor
+│   │   ├── CheckboxListField.razor
+│   │   ├── RadioButtonListField.razor
+│   │   ├── RepeaterField.razor
+│   │   ├── DatePickerField.razor       # Built-in date picker
+│   │   └── FileUploadField.razor       # Built-in file upload
+│   ├── FieldComponentRegistry.cs       # Singleton registry for custom field types
+│   ├── FieldTypeRegistration.cs        # Descriptor: fieldType string → component Type
+│   └── FormFlowComponentExtensions.cs  # AddFormFlowComponents() / AddCustomFieldType<T>()
 │
 └── FormFlow.App/               # Demo Blazor Server application
     ├── Pages/WorkflowPage.razor        # Main wizard page
+    ├── Components/
+    │   └── ColorPickerField.razor      # Example custom field type (color picker)
     ├── Providers/                      # Example IDataSourceProvider implementations
     │   ├── CountryProvider.cs
     │   ├── CityProvider.cs
@@ -139,14 +148,17 @@ Place a `.json` file in `FormFlow.App/wwwroot/workflows/`. A workflow has a key,
 
 ### Field Types
 
-| `fieldType`     | Description                                                                 |
-|-----------------|-----------------------------------------------------------------------------|
-| `text`          | Single-line text input                                                      |
-| `textarea`      | Multi-line text area (`rows` property controls height, default `4`)        |
-| `number`        | Numeric input                                                               |
-| `select`        | Dropdown populated by an `IDataSourceProvider` (`dataSource` key required) |
-| `checkboxlist`  | Multi-select checkbox group, value stored as `List<string>`                 |
-| `repeater`      | Dynamically add/remove structured entry groups with `subFields`             |
+| `fieldType`      | Description                                                                 |
+|------------------|-----------------------------------------------------------------------------|
+| `text`           | Single-line text input                                                      |
+| `textarea`       | Multi-line text area (`rows` property controls height, default `4`)        |
+| `number`         | Numeric input                                                               |
+| `select`         | Dropdown populated by an `IDataSourceProvider` (`dataSource` key required) |
+| `checkboxlist`   | Multi-select checkbox group, value stored as `List<string>`                 |
+| `radiobuttonlist`| Single-select radio button group                                            |
+| `repeater`       | Dynamically add/remove structured entry groups with `subFields`             |
+| `date`           | Date picker (`<input type="date">`), value stored as `"YYYY-MM-DD"` string |
+| `fileupload`     | File chooser; stores the selected filename as the field value               |
 
 ### Conditional Visibility
 
@@ -222,6 +234,65 @@ A `repeater` field renders a list of entry cards, each containing a complete sub
 
 ---
 
+## Adding a Custom Field Component
+
+The built-in field types cover common cases, but real-world forms often need specialized UI controls — color pickers, rich-text editors, signature pads, date-range selectors, star ratings, and so on. FormFlow lets you register any Blazor component as a first-class field type without touching the library.
+
+### 1. Create the component
+
+Create a Razor component in your application and inherit `FieldComponentBase`. This gives you the standard parameter set (`Field`, `Value`, `OnValueChanged`, `FormContext`, `OptionService`, `ValidationErrors`):
+
+```razor
+@namespace MyApp.Components
+@inherits FormFlow.Components.FieldComponentBase
+
+<div class="mb-3">
+    <label class="form-label" for="@_id">@Field.Label</label>
+
+    <input id="@_id" type="color"
+           class="form-control form-control-color"
+           value="@_color"
+           @onchange="HandleChange" />
+</div>
+
+@code {
+    private string _id    = string.Empty;
+    private string _color = "#000000";
+
+    protected override void OnInitialized()  => _id    = $"field-{Field.Key.ToLowerInvariant()}";
+    protected override void OnParametersSet() => _color = Value is string s ? s : "#000000";
+
+    private async Task HandleChange(ChangeEventArgs e) =>
+        await OnValueChanged.InvokeAsync(e.Value?.ToString());
+}
+```
+
+### 2. Register the component
+
+Call `AddFormFlowComponents()` once as the baseline, then `AddCustomFieldType<T>()` for each custom type. The API mirrors `IDataSourceProvider` registration:
+
+```csharp
+// Program.cs
+builder.Services.AddFormFlowComponents();                      // baseline registry
+builder.Services.AddCustomFieldType<ColorPickerField>("color"); // custom type
+```
+
+### 3. Reference the type in JSON
+
+```jsonc
+{
+  "key": "ThemeColor",
+  "label": "Preferred Theme Color",
+  "fieldType": "color"
+}
+```
+
+That's all — `DynamicForm` checks the registry before its built-in switch, so the new type is live immediately.
+
+> **Demo:** `FormFlow.App/Components/ColorPickerField.razor` is a fully working example. It is wired up in `Program.cs` and used in the *Preferences* step of the sample workflow.
+
+---
+
 ## Adding a Custom Data Source
 
 1. Implement `IDataSourceProvider` in `FormFlow.App/Providers/` (or your own project):
@@ -284,7 +355,7 @@ JSON Workflow File
 **Key design principles:**
 - **Models carry no logic** — `WorkflowDefinition`, `FieldDefinition`, `ConditionRule`, and `ValidationRule` are plain data classes.
 - **Services are stateless** — `ValidationService` and `ConditionEvaluator` are pure functions / singletons with no side effects.
-- **Open/Closed for extension** — adding a new field type requires one new `.razor` file and one line in `DynamicForm.razor`'s `Resolve` switch. Adding a new data source requires one new class and one DI registration.
+- **Open/Closed for extension** — adding a new built-in field type requires one new `.razor` file and one line in `DynamicForm.razor`'s `Resolve` switch. Application-level custom types need only a Razor component and one `AddCustomFieldType<T>()` call. Adding a new data source requires one new class and one DI registration.
 
 ---
 
