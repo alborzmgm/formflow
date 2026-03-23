@@ -10,7 +10,7 @@
 - **Multi-step wizard UI** — visual progress stepper, Back/Next/Submit navigation, and per-step validation.
 - **Rich field types** — `text`, `textarea`, `number`, `select`, `checkboxlist`, `radiobuttonlist`, `repeater`, `date`, and `fileupload`.
 - **Custom field components** — register any Blazor component as a new field type with a single `AddCustomFieldType<T>()` call; no library code changes required.
-- **Conditional visibility** — show or hide any field based on the value of another field using operators: `equals`, `notEquals`, `hasValue`, `isEmpty`, `contains`, `greaterThan`, `lessThan`.
+- **Conditional visibility** — show or hide any field based on the value of another field using operators: `equals`, `notEquals`, `hasValue`, `isEmpty`, `contains`, `greaterThan`, `lessThan`, `in`, `notIn`.
 - **Cascading / dependent selects** — `select` fields can depend on a parent field; the option list reloads automatically when the parent value changes.
 - **Declarative validation** — attach any combination of rules to a field: `required`, `minLength`, `maxLength`, `min`, `max`, `regex`, `email`, `minItems`, `maxItems`, `minEntries`, `maxEntries`.
 - **Pluggable data sources** — implement `IDataSourceProvider` and register it with DI; no other changes needed to wire up a new dropdown source.
@@ -168,6 +168,12 @@ Use `visibleWhen` on any field to conditionally show it:
 "visibleWhen": { "field": "CountryId", "operator": "equals", "value": "US" }
 ```
 
+To match against multiple values (OR semantics), use the `in` operator with a `values` array:
+
+```jsonc
+"visibleWhen": { "field": "CountryId", "operator": "in", "values": ["US", "Germany"] }
+```
+
 **Supported operators:**
 
 | Operator       | Applies to               | Description                                 |
@@ -179,6 +185,8 @@ Use `visibleWhen` on any field to conditionally show it:
 | `contains`     | scalar, checkboxlist     | Scalar contains substring / list contains item |
 | `greaterThan`  | scalar (numeric)         | Numeric value > target                      |
 | `lessThan`     | scalar (numeric)         | Numeric value < target                      |
+| `in`           | scalar                   | Value matches any entry in `values` list (case-insensitive) |
+| `notIn`        | scalar                   | Value does not match any entry in `values` list (case-insensitive) |
 
 ### Validation Rules
 
