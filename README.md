@@ -341,7 +341,10 @@ JSON Workflow File
   WorkflowLoader          (deserializes JSON → WorkflowDefinition)
        │
        ▼
-  WorkflowPage.razor      (orchestrates steps, navigation, submission)
+  WorkflowPage.razor      (thin page wrapper — loads workflow, renders WorkflowView)
+       │
+       ▼
+  WorkflowView.razor      (reusable component — orchestrates steps, navigation, submission)
        │
        ▼
   DynamicForm.razor        (renders FieldDefinitions via DynamicComponent)
