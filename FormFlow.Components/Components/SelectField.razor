@@ -23,6 +23,7 @@
         <select id="@_id"
                 class="form-select @(HasErrors ? "is-invalid" : "")"
                 disabled="@IsDisabled"
+                @key="@(_lastParent?.ToString() ?? string.Empty)"
                 @onchange="OnChange">
             <option value="">— Select @Field.Label —</option>
             @foreach (var opt in _options)
