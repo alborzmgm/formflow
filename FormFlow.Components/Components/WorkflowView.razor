@@ -1,9 +1,12 @@
 @namespace FormFlow.Components
 
 @inject ValidationService ValidationService
+@inject WorkflowLoader    WorkflowLoader
+
+<PageTitle>@(ResolvedWorkflow?.Name ?? "Loading…")</PageTitle>
 
 <!-- ── Loading state ─────────────────────────────────────────────────────── -->
-@if (Workflow is null)
+@if (ResolvedWorkflow is null)
 {
     <div class="d-flex justify-content-center align-items-center" style="min-height:100vh">
         <div class="text-center text-muted">
@@ -20,10 +23,10 @@ else
     <nav class="navbar wfe-navbar">
         <div class="container">
             <span class="navbar-brand text-white">
-                <i class="bi bi-ui-checks-grid me-2"></i>@Workflow.Name
+                <i class="bi bi-ui-checks-grid me-2"></i>@ResolvedWorkflow.Name
             </span>
             <span class="wfe-step-counter">
-                Step @(_currentStepIndex + 1) of @Workflow.Steps.Count
+                Step @(_currentStepIndex + 1) of @ResolvedWorkflow.Steps.Count
             </span>
         </div>
     </nav>
@@ -33,10 +36,10 @@ else
         <!-- ── Step progress ─────────────────────────────────────────── -->
         <div class="wfe-stepper">
             <div class="wfe-stepper-track"></div>
-            @for (int i = 0; i < Workflow.Steps.Count; i++)
+            @for (int i = 0; i < ResolvedWorkflow.Steps.Count; i++)
             {
                 var idx  = i;
-                var step = Workflow.Steps[i];
+                var step = ResolvedWorkflow.Steps[i];
                 var css  = idx < _currentStepIndex  ? "wfe-stepper-item wfe-stepper-item--done"
                          : idx == _currentStepIndex ? "wfe-stepper-item wfe-stepper-item--active"
                          :                            "wfe-stepper-item";
@@ -107,7 +110,7 @@ else
                         <span class="text-muted" style="font-size:.82rem">
                             @VisibleFieldCount field(s) on this step
                         </span>
-                        @if (_currentStepIndex < Workflow.Steps.Count - 1)
+                        @if (_currentStepIndex < ResolvedWorkflow.Steps.Count - 1)
                         {
                             <button class="btn btn-primary" @onclick="Next">
                                 Next<i class="bi bi-arrow-right ms-2"></i>
@@ -213,26 +216,46 @@ else
     /// <summary>The workflow definition to render. When null, a loading spinner is shown.</summary>
     [Parameter] public WorkflowDefinition? Workflow { get; set; }
 
+    /// <summary>
+    /// File name (relative to wwwroot/workflows/) to load automatically.
+    /// When set, <c>WorkflowView</c> fetches and renders the workflow without
+    /// any code in the host page.  Takes precedence over <see cref="Workflow"/>
+    /// only when <see cref="Workflow"/> is null.
+    /// </summary>
+    [Parameter] public string? WorkflowFile { get; set; }
+
+    private WorkflowDefinition? _loadedWorkflow;
+    private WorkflowDefinition? ResolvedWorkflow => Workflow ?? _loadedWorkflow;
+
     private FormContext _ctx              = new();
     private int         _currentStepIndex = 0;
     private bool        _submitted        = false;
     private DynamicForm? _form;
     private string?     _lastWorkflowKey;
+    private string?     _lastWorkflowFile;
 
     private IReadOnlyDictionary<string, IReadOnlyList<string>> _errors =
         new Dictionary<string, IReadOnlyList<string>>();
 
-    private StepDefinition CurrentStep => Workflow!.Steps[_currentStepIndex];
+    private StepDefinition CurrentStep => ResolvedWorkflow!.Steps[_currentStepIndex];
 
     private int VisibleFieldCount =>
         _form?.GetVisibleFieldKeys().Count() ?? CurrentStep.Fields.Count;
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
-        // Reset state only when a different workflow is provided.
-        if (Workflow?.WorkflowKey == _lastWorkflowKey) return;
+        // Load from file whenever WorkflowFile changes (and no explicit Workflow is supplied).
+        if (Workflow is null && WorkflowFile is not null && WorkflowFile != _lastWorkflowFile)
+        {
+            _lastWorkflowFile = WorkflowFile;
+            _loadedWorkflow   = await WorkflowLoader.LoadAsync(WorkflowFile);
+        }
 
-        _lastWorkflowKey  = Workflow?.WorkflowKey;
+        // Reset form state when the active workflow changes.
+        var activeKey = ResolvedWorkflow?.WorkflowKey;
+        if (activeKey == _lastWorkflowKey) return;
+
+        _lastWorkflowKey  = activeKey;
         _ctx              = new();
         _currentStepIndex = 0;
         _submitted        = false;
@@ -278,11 +301,11 @@ else
 
     private string GetItemLabelCapitalized(string fieldKey)
     {
-        var field = Workflow?.Steps
+        var field = ResolvedWorkflow?.Steps
             .SelectMany(s => s.Fields)
             .FirstOrDefault(f => string.Equals(f.Key, fieldKey, StringComparison.OrdinalIgnoreCase));
 
-        var label = field?.ItemLabel is { Length: > 0 } lbl ? lbl.Trim() : "entry";
+        var label = field?.ItemLabel?.Trim() is { Length: > 0 } trimmed ? trimmed : "entry";
         return char.ToUpper(label[0]) + label[1..];
     }
 }

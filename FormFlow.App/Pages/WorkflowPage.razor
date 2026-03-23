@@ -1,15 +1,4 @@
 @page "/workflow"
 @rendermode InteractiveServer
 
-@inject WorkflowLoader WorkflowLoader
-
-<PageTitle>@(_workflow?.Name ?? "Loading…")</PageTitle>
-
-<WorkflowView Workflow="@_workflow" />
-
-@code {
-    private WorkflowDefinition? _workflow;
-
-    protected override async Task OnInitializedAsync() =>
-        _workflow = await WorkflowLoader.LoadAsync("location-workflow.json");
-}
+<WorkflowView WorkflowFile="location-workflow.json" />
