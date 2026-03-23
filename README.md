@@ -341,11 +341,11 @@ JSON Workflow File
   WorkflowLoader          (deserializes JSON → WorkflowDefinition)
        │
        ▼
-  WorkflowView.razor      (self-contained component — accepts WorkflowFile="…" or Workflow="…";
+  WorkflowViewer.razor    (self-contained component — accepts WorkflowFile="…" or Workflow="…";
   │                        loads the definition if needed, then orchestrates steps,
   │                        navigation, validation, and submission)
   │  ┌─ used as a page via:
-  │  └─ WorkflowPage.razor   (@page "/workflow" — single-line host for WorkflowView)
+  │  └─ WorkflowPage.razor   (@page "/workflow" — single-line host for WorkflowViewer)
        │
        ▼
   DynamicForm.razor        (renders FieldDefinitions via DynamicComponent)
