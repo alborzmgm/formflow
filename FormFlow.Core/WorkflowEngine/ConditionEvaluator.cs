@@ -53,7 +53,7 @@ public static class ConditionEvaluator
             };
         }
 
-        var str = raw?.ToString() ?? string.Empty;
+        var str    = raw?.ToString() ?? string.Empty;
 
         return condition.Operator.ToLowerInvariant() switch
         {
@@ -66,6 +66,14 @@ public static class ConditionEvaluator
                              decimal.TryParse(target, out var b) && a > b,
             "lessthan"    => decimal.TryParse(str, out var c) &&
                              decimal.TryParse(target, out var d) && c < d,
+            "in"          => (condition.Values is { Count: > 0 } inValues)
+                                 ? inValues.Any(v => string.Equals(str, v, StringComparison.OrdinalIgnoreCase))
+                                 : throw new InvalidOperationException(
+                                       "ConditionRule operator 'in' requires a non-empty 'values' list."),
+            "notin"       => (condition.Values is { Count: > 0 } notInValues)
+                                 ? !notInValues.Any(v => string.Equals(str, v, StringComparison.OrdinalIgnoreCase))
+                                 : throw new InvalidOperationException(
+                                       "ConditionRule operator 'notIn' requires a non-empty 'values' list."),
             _ => throw new NotSupportedException(
                      $"Unknown ConditionRule operator '{condition.Operator}'.")
         };
