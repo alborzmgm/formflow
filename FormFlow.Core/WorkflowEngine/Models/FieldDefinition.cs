@@ -12,8 +12,15 @@ public sealed class FieldDefinition
     /// <summary>"text" | "number" | "select"</summary>
     public string FieldType { get; set; } = string.Empty;
 
-    /// <summary>IDataSourceProvider key — only used when FieldType = "select".</summary>
+    /// <summary>IDataSourceProvider key — only used when FieldType = "select" or "searchableselect".</summary>
     public string? DataSource { get; set; }
+
+    /// <summary>
+    /// When <see langword="true"/>, the "searchableselect" field allows the user to submit a
+    /// free-text value that does not appear in the option list.
+    /// Ignored by all other field types.
+    /// </summary>
+    public bool AllowCustomValue { get; set; }
 
     /// <summary>Parent field key for dependent option loading.</summary>
     public string? DependsOn { get; set; }

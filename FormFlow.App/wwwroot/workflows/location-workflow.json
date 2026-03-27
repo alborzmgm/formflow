@@ -22,7 +22,7 @@
         {
           "key": "CityId",
           "label": "City",
-          "fieldType": "select",
+          "fieldType": "searchableselect",
           "dataSource": "Cities",
           "dependsOn": "CountryId",
           "visibleWhen": [{ "field": "CountryId", "operator": "hasValue" }],
@@ -34,31 +34,37 @@
         },
         {
           "key": "AddressLine1",
-          "label": "Address Line 1",
-          "fieldType": "text",
-          "placeholder": "123 Main Street",
-          "visibleWhen": [{ "field": "CountryId", "operator": "hasValue" }],
+          "label": "Street",
+          "fieldType": "searchableselect",
+          "dataSource": "Streets",
+          "dependsOn": "CityId",
+          "placeholder": "Search or enter a street name…",
+          "allowCustomValue": true,
+          "visibleWhen": [{ "field": "CityId", "operator": "hasValue" }],
           "required": true,
           "order": 3,
           "validationRules": [
-            { "type": "required", "message": "Address is required." },
-            { "type": "minLength", "value": "5" },
+            { "type": "required", "message": "Street is required." },
+            { "type": "minLength", "value": "3" },
             { "type": "maxLength", "value": "150" }
           ]
         },
         {
           "key": "PostalCode",
           "label": "Postal Code",
-          "fieldType": "text",
-          "placeholder": "e.g. 10001",
-          "visibleWhen": [{ "field": "CountryId", "operator": "hasValue" }],
+          "fieldType": "searchableselect",
+          "dataSource": "PostalCodes",
+          "dependsOn": "CityId",
+          "placeholder": "Search or enter a postal code…",
+          "allowCustomValue": true,
+          "visibleWhen": [{ "field": "CityId", "operator": "hasValue" }],
           "required": false,
           "order": 4,
           "validationRules": [
             {
               "type": "regex",
-              "pattern": "^[A-Za-z0-9\\s\\-]{3,10}$",
-              "message": "Postal code must be 3-10 alphanumeric characters."
+              "pattern": "^[A-Za-z0-9\\s\\-]{2,10}$",
+              "message": "Postal code must be 2-10 alphanumeric characters."
             }
           ]
         },

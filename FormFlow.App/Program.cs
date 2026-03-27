@@ -24,6 +24,8 @@ builder.Services.AddSingleton<ValidationService>();
 // To add a new data source: add one line here — nothing else changes.
 builder.Services.AddScoped<IDataSourceProvider, CountryProvider>();
 builder.Services.AddScoped<IDataSourceProvider, CityProvider>();
+builder.Services.AddScoped<IDataSourceProvider, PostalCodeProvider>();
+builder.Services.AddScoped<IDataSourceProvider, StreetProvider>();
 builder.Services.AddScoped<IDataSourceProvider, ContactMethodsProvider>();
 builder.Services.AddScoped<IDataSourceProvider, InterestsProvider>();
 builder.Services.AddScoped<IDataSourceProvider, PrimaryInterestProvider>();
