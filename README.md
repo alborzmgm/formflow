@@ -8,10 +8,11 @@
 
 - **100% JSON-driven forms** — add, remove, or reorder steps and fields by editing a single JSON file; no C# or Razor changes required.
 - **Multi-step wizard UI** — visual progress stepper, Back/Next/Submit navigation, and per-step validation.
-- **Rich field types** — `text`, `textarea`, `number`, `select`, `checkboxlist`, `radiobuttonlist`, `repeater`, `date`, and `fileupload`.
+- **Rich field types** — `text`, `textarea`, `number`, `select`, `searchableselect`, `checkboxlist`, `radiobuttonlist`, `repeater`, `date`, and `fileupload`.
+- **Searchable select** — type-to-filter dropdown with keyboard navigation; set `"allowCustomValue": true` to let users enter free-text values not present in the option list.
 - **Custom field components** — register any Blazor component as a new field type with a single `AddCustomFieldType<T>()` call; no library code changes required.
 - **Conditional visibility** — show or hide any field based on the value of another field using operators: `equals`, `notEquals`, `hasValue`, `isEmpty`, `contains`, `greaterThan`, `lessThan`, `in`, `notIn`.
-- **Cascading / dependent selects** — `select` fields can depend on a parent field; the option list reloads automatically when the parent value changes.
+- **Cascading / dependent selects** — `select` and `searchableselect` fields can depend on a parent field; the option list reloads automatically when the parent value changes.
 - **Declarative validation** — attach any combination of rules to a field: `required`, `minLength`, `maxLength`, `min`, `max`, `regex`, `email`, `minItems`, `maxItems`, `minEntries`, `maxEntries`.
 - **Pluggable data sources** — implement `IDataSourceProvider` and register it with DI; no other changes needed to wire up a new dropdown source.
 - **Repeater fields** — dynamically add/remove structured entry groups, each with its own sub-fields, conditions, and validation.
@@ -50,6 +51,7 @@ FormFlow.sln
 │   │   ├── TextareaField.razor
 │   │   ├── NumberField.razor
 │   │   ├── SelectField.razor
+│   │   ├── SearchableSelectField.razor # Type-to-filter dropdown with optional custom values
 │   │   ├── CheckboxListField.razor
 │   │   ├── RadioButtonListField.razor
 │   │   ├── RepeaterField.razor
@@ -66,6 +68,8 @@ FormFlow.sln
     ├── Providers/                      # Example IDataSourceProvider implementations
     │   ├── CountryProvider.cs
     │   ├── CityProvider.cs
+    │   ├── PostalCodeProvider.cs
+    │   ├── StreetProvider.cs
     │   ├── InterestsProvider.cs
     │   └── ...
     └── wwwroot/workflows/              # Place your workflow JSON files here
@@ -134,7 +138,7 @@ Place a `.json` file in `FormFlow.App/wwwroot/workflows/`. A workflow has a key,
         {
           "key": "CityId",
           "label": "City",
-          "fieldType": "select",
+          "fieldType": "searchableselect",
           "dataSource": "Cities",
           "dependsOn": "CountryId",
           "order": 4,
@@ -148,17 +152,43 @@ Place a `.json` file in `FormFlow.App/wwwroot/workflows/`. A workflow has a key,
 
 ### Field Types
 
-| `fieldType`      | Description                                                                 |
-|------------------|-----------------------------------------------------------------------------|
-| `text`           | Single-line text input                                                      |
-| `textarea`       | Multi-line text area (`rows` property controls height, default `4`)        |
-| `number`         | Numeric input                                                               |
-| `select`         | Dropdown populated by an `IDataSourceProvider` (`dataSource` key required) |
-| `checkboxlist`   | Multi-select checkbox group, value stored as `List<string>`                 |
-| `radiobuttonlist`| Single-select radio button group                                            |
-| `repeater`       | Dynamically add/remove structured entry groups with `subFields`             |
-| `date`           | Date picker (`<input type="date">`), value stored as `"YYYY-MM-DD"` string |
-| `fileupload`     | File chooser; stores the selected filename as the field value               |
+| `fieldType`        | Description                                                                                                    |
+|--------------------|----------------------------------------------------------------------------------------------------------------|
+| `text`             | Single-line text input                                                                                         |
+| `textarea`         | Multi-line text area (`rows` property controls height, default `4`)                                           |
+| `number`           | Numeric input                                                                                                  |
+| `select`           | Dropdown populated by an `IDataSourceProvider` (`dataSource` key required)                                    |
+| `searchableselect` | Filterable dropdown with keyboard navigation; set `"allowCustomValue": true` to accept free-text values       |
+| `checkboxlist`     | Multi-select checkbox group, value stored as `List<string>`                                                    |
+| `radiobuttonlist`  | Single-select radio button group                                                                               |
+| `repeater`         | Dynamically add/remove structured entry groups with `subFields`                                                |
+| `date`             | Date picker (`<input type="date">`), value stored as `"YYYY-MM-DD"` string                                   |
+| `fileupload`       | File chooser; stores the selected filename as the field value                                                  |
+
+### Searchable Select Field
+
+The `searchableselect` type renders a text input that filters a dynamic option list as the user types. It supports the same `dataSource` and `dependsOn` properties as a regular `select` field, and adds two additional capabilities:
+
+- **Keyboard navigation** — ArrowUp/Down moves through the filtered list; Enter selects the highlighted item; Escape dismisses the dropdown.
+- **Custom values** — when `"allowCustomValue": true`, a **"Use `<typed text>`"** entry appears at the bottom of the dropdown when the user's input does not exactly match any option. Selecting it submits the typed text as the field value.
+
+```jsonc
+{
+  "key": "PostalCode",
+  "label": "Postal Code",
+  "fieldType": "searchableselect",
+  "dataSource": "PostalCodes",
+  "dependsOn": "CityId",
+  "placeholder": "Search or enter a postal code…",
+  "allowCustomValue": true,
+  "visibleWhen": [{ "field": "CityId", "operator": "hasValue" }],
+  "validationRules": [
+    { "type": "regex", "pattern": "^[A-Za-z0-9\\s\\-]{2,10}$", "message": "Postal code must be 2-10 alphanumeric characters." }
+  ]
+}
+```
+
+> **Tip:** `searchableselect` follows the same scalar validation rules as `text` and `select` (`required`, `minLength`, `maxLength`, `regex`, etc.).
 
 ### Conditional Visibility
 
@@ -201,7 +231,7 @@ To match against multiple values (OR semantics within a single rule), use the `i
 
 Attach `validationRules` to any field. All rules accept an optional `message` property to override the default error text.
 
-**Scalar fields (`text`, `textarea`, `number`, `select`):**
+**Scalar fields (`text`, `textarea`, `number`, `select`, `searchableselect`):**
 
 | `type`      | `value` / `pattern` | Description                   |
 |-------------|----------------------|-------------------------------|
@@ -340,7 +370,7 @@ builder.Services.AddScoped<IDataSourceProvider, RegionProvider>();
 3. Reference the key in your workflow JSON:
 
 ```jsonc
-{ "key": "RegionId", "label": "Region", "fieldType": "select", "dataSource": "Regions" }
+{ "key": "RegionId", "label": "Region", "fieldType": "searchableselect", "dataSource": "Regions" }
 ```
 
 That's all — no other code changes are required.

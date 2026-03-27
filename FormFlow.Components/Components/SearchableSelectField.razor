@@ -1,0 +1,299 @@
+@namespace FormFlow.Components
+@inherits FieldComponentBase
+
+<div class="mb-3">
+    <label class="form-label" for="@_id">
+        @Field.Label
+        @if (Field.Required)
+        {
+            <span class="text-danger ms-1" title="Required">*</span>
+        }
+    </label>
+
+    @if (_loading)
+    {
+        <div class="wfe-shimmer" style="height:42px"></div>
+        <div class="form-text text-muted mt-1">
+            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+            Loading @Field.Label options…
+        </div>
+    }
+    else if (IsDisabled)
+    {
+        <input id="@_id"
+               type="text"
+               class="form-control"
+               disabled
+               placeholder="— Select @(Field.DependsOn) first —" />
+        <div class="form-text text-muted">
+            <i class="bi bi-arrow-up-circle me-1"></i>
+            Please select <strong>@Field.DependsOn</strong> first.
+        </div>
+    }
+    else
+    {
+        <div class="position-relative">
+            <div class="input-group">
+                <input id="@_id"
+                       type="text"
+                       class="form-control @(HasErrors ? "is-invalid" : "")"
+                       placeholder="@(Field.Placeholder ?? $"Search {Field.Label.ToLower()}…")"
+                       autocomplete="off"
+                       value="@_searchText"
+                       @onfocus="OnFocus"
+                       @oninput="OnInput"
+                       @onblur="OnBlur"
+                       @onkeydown="OnKeyDown" />
+                @if (!string.IsNullOrEmpty(_searchText))
+                {
+                    <button class="btn btn-outline-secondary"
+                            type="button"
+                            tabindex="-1"
+                            title="Clear"
+                            @onmousedown:preventDefault
+                            @onclick="ClearSelection">
+                        <i class="bi bi-x"></i>
+                    </button>
+                }
+                else
+                {
+                    <span class="input-group-text">
+                        <i class="bi bi-search"></i>
+                    </span>
+                }
+            </div>
+
+            @if (_isOpen)
+            {
+                <ul class="dropdown-menu show w-100 overflow-auto"
+                    style="max-height:240px;z-index:1050;"
+                    role="listbox"
+                    aria-label="@Field.Label options">
+
+                    @if (_filteredOptions.Count > 0)
+                    {
+                        @for (int i = 0; i < _filteredOptions.Count; i++)
+                        {
+                            var opt      = _filteredOptions[i];
+                            var idx      = i;
+                            var isActive = idx == _activeIndex;
+                            <li role="option" aria-selected="@(opt.Value == Value?.ToString())">
+                                <button type="button"
+                                        class="dropdown-item @(isActive ? "active" : "") @(opt.Value == Value?.ToString() ? "fw-semibold" : "")"
+                                        @onmousedown:preventDefault
+                                        @onclick="() => SelectOption(opt)">
+                                    @opt.Label
+                                    @if (opt.Value == Value?.ToString())
+                                    {
+                                        <i class="bi bi-check ms-1"></i>
+                                    }
+                                </button>
+                            </li>
+                        }
+                    }
+                    else if (!Field.AllowCustomValue)
+                    {
+                        <li>
+                            <span class="dropdown-item disabled text-muted">
+                                <i class="bi bi-search me-1"></i>No matches found.
+                            </span>
+                        </li>
+                    }
+
+                    @if (Field.AllowCustomValue && !string.IsNullOrWhiteSpace(_typedText) && !HasExactMatch())
+                    {
+                        var customIdx = _filteredOptions.Count;
+                        <li role="option">
+                            <button type="button"
+                                    class="dropdown-item text-primary @(_activeIndex == customIdx ? "active" : "")"
+                                    @onmousedown:preventDefault
+                                    @onclick="UseCustomValue">
+                                <i class="bi bi-pencil me-1"></i>Use "<strong>@_typedText</strong>"
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+
+        @if (HasErrors)
+        {
+            <div class="invalid-feedback d-block">
+                @foreach (var e in ValidationErrors)
+                {
+                    <div><i class="bi bi-exclamation-circle-fill me-1"></i>@e</div>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private string                  _id            = string.Empty;
+    private IList<OptionItem>       _options       = [];
+    private IList<OptionItem>       _filteredOptions = [];
+    private bool                    _loading       = false;
+    private object?                 _lastParent    = new();
+    private bool                    _isOpen        = false;
+    private string                  _searchText    = string.Empty;
+    private string                  _typedText     = string.Empty;
+    private int                     _activeIndex   = -1;
+
+    private bool HasErrors  => ValidationErrors.Count > 0;
+    private bool IsDisabled =>
+        Field.DependsOn is not null && !(FormContext?.HasValue(Field.DependsOn) ?? false);
+
+    protected override void OnInitialized() => _id = $"field-{Field.Key.ToLowerInvariant()}";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Sync display text when value is set externally
+        SyncDisplayFromValue();
+
+        if (Field.DataSource is null || OptionService is null || FormContext is null) return;
+        var parent = Field.DependsOn is not null ? FormContext.GetValue(Field.DependsOn) : null;
+        if (Equals(parent, _lastParent)) return;
+        _lastParent = parent;
+        _loading    = true;
+        StateHasChanged();
+        _options         = (await OptionService.GetOptionsAsync(Field.DataSource, FormContext)).ToList();
+        _filteredOptions = _options;
+        _loading         = false;
+        _isOpen          = false;
+        _searchText      = string.Empty;
+        _typedText       = string.Empty;
+        _activeIndex     = -1;
+        SyncDisplayFromValue();
+    }
+
+    // ── Display helpers ───────────────────────────────────────────────────────
+
+    private void SyncDisplayFromValue()
+    {
+        var current = Value?.ToString();
+        if (string.IsNullOrEmpty(current))
+        {
+            _searchText = string.Empty;
+            return;
+        }
+        var match = _options.FirstOrDefault(o => o.Value == current);
+        _searchText = match is not null ? match.Label : current;
+    }
+
+    private bool HasExactMatch() =>
+        _options.Any(o => string.Equals(o.Label, _typedText, StringComparison.OrdinalIgnoreCase)
+                       || string.Equals(o.Value, _typedText, StringComparison.OrdinalIgnoreCase));
+
+    private void ApplyFilter()
+    {
+        if (string.IsNullOrWhiteSpace(_typedText))
+        {
+            _filteredOptions = _options;
+        }
+        else
+        {
+            var q = _typedText.Trim();
+            _filteredOptions = _options
+                .Where(o => o.Label.Contains(q, StringComparison.OrdinalIgnoreCase)
+                         || o.Value.Contains(q, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+        _activeIndex = _filteredOptions.Count > 0 ? 0 : -1;
+    }
+
+    // ── Event handlers ────────────────────────────────────────────────────────
+
+    private void OnFocus()
+    {
+        _typedText       = string.Empty;
+        _filteredOptions = _options;
+        _isOpen          = true;
+        _activeIndex     = _filteredOptions.Count > 0 ? 0 : -1;
+    }
+
+    private void OnInput(ChangeEventArgs e)
+    {
+        _typedText  = e.Value?.ToString() ?? string.Empty;
+        _searchText = _typedText;
+        ApplyFilter();
+        _isOpen = true;
+    }
+
+    private void OnBlur()
+    {
+        // Small delay so mousedown on dropdown items fires first
+        _isOpen = false;
+        // If user cleared the text, reset the value
+        if (string.IsNullOrWhiteSpace(_searchText))
+        {
+            _searchText = string.Empty;
+            _ = OnValueChanged.InvokeAsync(null);
+            return;
+        }
+        // Restore display text to the currently selected value label
+        SyncDisplayFromValue();
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (!_isOpen)
+        {
+            if (e.Key is "ArrowDown" or "ArrowUp" or "Enter")
+            {
+                _isOpen = true;
+                ApplyFilter();
+            }
+            return;
+        }
+
+        int totalItems = _filteredOptions.Count + (Field.AllowCustomValue && !string.IsNullOrWhiteSpace(_typedText) && !HasExactMatch() ? 1 : 0);
+
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                _activeIndex = (_activeIndex + 1) % Math.Max(1, totalItems);
+                break;
+            case "ArrowUp":
+                _activeIndex = (_activeIndex - 1 + Math.Max(1, totalItems)) % Math.Max(1, totalItems);
+                break;
+            case "Enter":
+                if (_activeIndex >= 0 && _activeIndex < _filteredOptions.Count)
+                    await SelectOption(_filteredOptions[_activeIndex]);
+                else if (Field.AllowCustomValue && _activeIndex == _filteredOptions.Count && !string.IsNullOrWhiteSpace(_typedText) && !HasExactMatch())
+                    await UseCustomValue();
+                break;
+            case "Escape":
+                _isOpen = false;
+                SyncDisplayFromValue();
+                break;
+        }
+    }
+
+    private async Task SelectOption(OptionItem opt)
+    {
+        _searchText  = opt.Label;
+        _typedText   = string.Empty;
+        _isOpen      = false;
+        _activeIndex = -1;
+        await OnValueChanged.InvokeAsync(opt.Value);
+    }
+
+    private async Task UseCustomValue()
+    {
+        var custom = _typedText.Trim();
+        _searchText  = custom;
+        _typedText   = string.Empty;
+        _isOpen      = false;
+        _activeIndex = -1;
+        await OnValueChanged.InvokeAsync(custom);
+    }
+
+    private async Task ClearSelection()
+    {
+        _searchText  = string.Empty;
+        _typedText   = string.Empty;
+        _isOpen      = false;
+        _activeIndex = -1;
+        await OnValueChanged.InvokeAsync(null);
+    }
+}
