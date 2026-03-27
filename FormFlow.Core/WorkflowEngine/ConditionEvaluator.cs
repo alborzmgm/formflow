@@ -10,17 +10,32 @@ public static class ConditionEvaluator
 {
     /// <summary>
     /// Returns true when the field should be visible.
-    /// A null condition always returns true (no rule = always visible).
+    /// A null or empty list always returns true (no rules = always visible).
+    /// When multiple rules are provided, ALL rules must be satisfied (AND semantics).
+    /// </summary>
+    public static bool IsVisible(List<ConditionRule>? conditions, FormContext context)
+    {
+        if (conditions is null || conditions.Count == 0) return true;
+
+        foreach (var condition in conditions)
+        {
+            if (!EvaluateSingle(condition, context))
+                return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Evaluates a single ConditionRule against the current form context.
     ///
     /// List fields (CheckboxListField) are handled explicitly:
     ///   hasValue / isEmpty  — delegate to FormContext.HasValue which is list-aware.
     ///   contains            — checks whether the list contains the target value.
     ///   equals / notEquals  — unsupported on list fields; always return false / true.
     /// </summary>
-    public static bool IsVisible(ConditionRule? condition, FormContext context)
+    private static bool EvaluateSingle(ConditionRule condition, FormContext context)
     {
-        if (condition is null) return true;
-
         var raw    = context.GetValue(condition.Field);
         var target = condition.Value ?? string.Empty;
 
