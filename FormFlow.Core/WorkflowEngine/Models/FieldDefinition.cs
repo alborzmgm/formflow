@@ -18,8 +18,11 @@ public sealed class FieldDefinition
     /// <summary>Parent field key for dependent option loading.</summary>
     public string? DependsOn { get; set; }
 
-    /// <summary>When present, the field is hidden unless this condition is true.</summary>
-    public ConditionRule? VisibleWhen { get; set; }
+    /// <summary>
+    /// When present, the field is hidden unless all conditions in the list evaluate to true (AND semantics).
+    /// An empty list or null means the field is always visible.
+    /// </summary>
+    public List<ConditionRule>? VisibleWhen { get; set; }
 
     /// <summary>Declarative validation constraints evaluated by ValidationService.</summary>
     public List<ValidationRule> ValidationRules { get; set; } = [];

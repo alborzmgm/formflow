@@ -25,7 +25,7 @@
           "fieldType": "select",
           "dataSource": "Cities",
           "dependsOn": "CountryId",
-          "visibleWhen": { "field": "CountryId", "operator": "hasValue" },
+          "visibleWhen": [{ "field": "CountryId", "operator": "hasValue" }],
           "required": true,
           "order": 2,
           "validationRules": [
@@ -37,7 +37,7 @@
           "label": "Address Line 1",
           "fieldType": "text",
           "placeholder": "123 Main Street",
-          "visibleWhen": { "field": "CountryId", "operator": "hasValue" },
+          "visibleWhen": [{ "field": "CountryId", "operator": "hasValue" }],
           "required": true,
           "order": 3,
           "validationRules": [
@@ -51,7 +51,7 @@
           "label": "Postal Code",
           "fieldType": "text",
           "placeholder": "e.g. 10001",
-          "visibleWhen": { "field": "CountryId", "operator": "hasValue" },
+          "visibleWhen": [{ "field": "CountryId", "operator": "hasValue" }],
           "required": false,
           "order": 4,
           "validationRules": [
@@ -67,7 +67,7 @@
           "label": "State Tax ID",
           "fieldType": "text",
           "placeholder": "US entities only",
-          "visibleWhen": { "field": "CountryId", "operator": "equals", "value": "US" },
+          "visibleWhen": [{ "field": "CountryId", "operator": "equals", "value": "US" }],
           "required": false,
           "order": 5,
           "validationRules": [
@@ -81,7 +81,7 @@
           "fieldType": "checkboxlist",
           "dataSource": "Interests",
           "dependsOn": "CountryId",
-          "visibleWhen": { "field": "CountryId", "operator": "hasValue" },
+          "visibleWhen": [{ "field": "CountryId", "operator": "hasValue" }],
           "required": true,
           "order": 6,
           "validationRules": [
@@ -176,7 +176,7 @@
           "label": "Company Name",
           "fieldType": "text",
           "placeholder": "Acme Corp (optional)",
-          "visibleWhen": { "field": "Email", "operator": "hasValue" },
+          "visibleWhen": [{ "field": "Email", "operator": "hasValue" }],
           "required": false,
           "order": 7,
           "validationRules": [
@@ -238,7 +238,7 @@
           "label": "Newsletter & Updates",
           "fieldType": "checkboxlist",
           "dataSource": "NewsletterTopics",
-          "visibleWhen": { "field": "NotificationFrequency", "operator": "hasValue" },
+          "visibleWhen": [{ "field": "NotificationFrequency", "operator": "hasValue" }],
           "required": false,
           "order": 4,
           "validationRules": [

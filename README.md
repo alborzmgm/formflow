@@ -138,7 +138,7 @@ Place a `.json` file in `FormFlow.App/wwwroot/workflows/`. A workflow has a key,
           "dataSource": "Cities",
           "dependsOn": "CountryId",
           "order": 4,
-          "visibleWhen": { "field": "CountryId", "operator": "hasValue" }
+          "visibleWhen": [{ "field": "CountryId", "operator": "hasValue" }]
         }
       ]
     }
@@ -162,16 +162,25 @@ Place a `.json` file in `FormFlow.App/wwwroot/workflows/`. A workflow has a key,
 
 ### Conditional Visibility
 
-Use `visibleWhen` on any field to conditionally show it:
+`visibleWhen` accepts an array of condition rules. The field is shown only when **all** rules are satisfied (AND semantics). Use a single-element array for a simple condition:
 
 ```jsonc
-"visibleWhen": { "field": "CountryId", "operator": "equals", "value": "US" }
+"visibleWhen": [{ "field": "CountryId", "operator": "equals", "value": "US" }]
 ```
 
-To match against multiple values (OR semantics), use the `in` operator with a `values` array:
+To require multiple conditions (field visible only when **all** are true):
 
 ```jsonc
-"visibleWhen": { "field": "CountryId", "operator": "in", "values": ["US", "Germany"] }
+"visibleWhen": [
+  { "field": "CountryId", "operator": "equals", "value": "US" },
+  { "field": "StateTaxId", "operator": "hasValue" }
+]
+```
+
+To match against multiple values (OR semantics within a single rule), use the `in` operator with a `values` array:
+
+```jsonc
+"visibleWhen": [{ "field": "CountryId", "operator": "in", "values": ["US", "Germany"] }]
 ```
 
 **Supported operators:**
