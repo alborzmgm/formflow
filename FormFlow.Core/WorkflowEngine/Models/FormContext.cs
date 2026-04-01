@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace FormFlow.Core.WorkflowEngine.Models;
 
 /// <summary>
@@ -59,67 +57,15 @@ public sealed class FormContext
 
     /// <summary>
     /// Populates this context from a previously saved values dictionary, replacing any
-    /// existing values.  Handles <see cref="JsonElement"/> values that appear when a
-    /// <see cref="FormFlowState"/> is deserialized from JSON, converting them back to
-    /// the expected runtime types (<c>string</c>, <c>List&lt;string&gt;</c>, or
-    /// <c>List&lt;Dictionary&lt;string, object?&gt;&gt;</c>).
+    /// existing values.  Handles <see cref="System.Text.Json.JsonElement"/> values that
+    /// appear when a <see cref="FormFlowState"/> is deserialized from JSON, converting
+    /// them back to the expected runtime types (<c>string</c>, <c>List&lt;string&gt;</c>,
+    /// or <c>List&lt;Dictionary&lt;string, object?&gt;&gt;</c>).
     /// </summary>
     public void LoadValues(IReadOnlyDictionary<string, object?> values)
     {
         _values.Clear();
         foreach (var (key, value) in values)
-            _values[key] = ConvertValue(value);
-    }
-
-    // ── JSON element conversion helpers ────────────────────────────────────
-
-    private static object? ConvertValue(object? value) =>
-        value is JsonElement element ? ConvertJsonElement(element) : value;
-
-    private static object? ConvertJsonElement(JsonElement element) => element.ValueKind switch
-    {
-        JsonValueKind.Null    => null,
-        JsonValueKind.String  => element.GetString(),
-        // Numbers are stored as strings in scalar fields (e.g. NumberField).
-        JsonValueKind.Number  => element.GetRawText(),
-        JsonValueKind.True    => "true",
-        JsonValueKind.False   => "false",
-        JsonValueKind.Array   => ConvertJsonArray(element),
-        JsonValueKind.Object  => ConvertJsonObject(element),
-        _                     => null,
-    };
-
-    private static object ConvertJsonArray(JsonElement element)
-    {
-        var items = element.EnumerateArray().ToList();
-
-        // Repeater field: array of objects → List<Dictionary<string, object?>>
-        // FormFlow arrays are always homogeneous (all strings or all objects),
-        // so checking the first element is sufficient for type detection.
-        if (items.Count > 0 && items[0].ValueKind == JsonValueKind.Object)
-        {
-            var entries = new List<Dictionary<string, object?>>(items.Count);
-            foreach (var item in items)
-            {
-                var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
-                foreach (var prop in item.EnumerateObject())
-                    dict[prop.Name] = ConvertJsonElement(prop.Value);
-                entries.Add(dict);
-            }
-            return entries;
-        }
-
-        // Checkbox list: array of strings → List<string>
-        return items.Select(e => e.ValueKind == JsonValueKind.String
-            ? e.GetString() ?? ""
-            : e.GetRawText()).ToList();
-    }
-
-    private static Dictionary<string, object?> ConvertJsonObject(JsonElement element)
-    {
-        var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
-        foreach (var prop in element.EnumerateObject())
-            dict[prop.Name] = ConvertJsonElement(prop.Value);
-        return dict;
+            _values[key] = JsonElementConverter.Convert(value);
     }
 }
