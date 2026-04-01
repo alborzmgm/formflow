@@ -224,6 +224,39 @@ else
     /// </summary>
     [Parameter] public string? WorkflowFile { get; set; }
 
+    /// <summary>
+    /// Optional previously saved state to restore when the workflow loads.
+    /// When the <see cref="FormFlowState.WorkflowKey"/> matches the active workflow,
+    /// the component pre-fills all field values and navigates to the saved step, allowing
+    /// users to resume an in-progress session.
+    /// </summary>
+    /// <remarks>
+    /// Obtain a state snapshot via the <see cref="OnStateChanged"/> callback, persist it
+    /// to any storage back-end (localStorage, database, session, etc.), and supply it here
+    /// on the next render to resume where the user left off.
+    /// </remarks>
+    [Parameter] public FormFlowState? InitialState { get; set; }
+
+    /// <summary>
+    /// Raised whenever the workflow state changes — i.e. when a field value is updated or
+    /// the user navigates between steps.  The payload is the current <see cref="FormFlowState"/>
+    /// snapshot.  Consumers can persist this to storage and pass it back via
+    /// <see cref="InitialState"/> to enable resuming the workflow later.
+    /// </summary>
+    /// <remarks>
+    /// This callback fires on every individual field change, which is suitable for auto-save
+    /// scenarios.  If the persistence operation is expensive (e.g. a network request),
+    /// consider debouncing the handler on the consumer side.
+    /// </remarks>
+    [Parameter] public EventCallback<FormFlowState> OnStateChanged { get; set; }
+
+    /// <summary>
+    /// Raised when the user successfully completes and submits the final step.
+    /// The payload is a read-only snapshot of all collected field values, ready to be
+    /// forwarded to a backend API, database, or any other storage.
+    /// </summary>
+    [Parameter] public EventCallback<IReadOnlyDictionary<string, object?>> OnSubmit { get; set; }
+
     private WorkflowDefinition? _loadedWorkflow;
     private WorkflowDefinition? ResolvedWorkflow => Workflow ?? _loadedWorkflow;
 
@@ -260,27 +293,40 @@ else
         _currentStepIndex = 0;
         _submitted        = false;
         _errors           = new Dictionary<string, IReadOnlyList<string>>();
+
+        // Restore previously saved state when the key matches.
+        if (InitialState is not null
+            && activeKey is not null
+            && string.Equals(InitialState.WorkflowKey, activeKey, StringComparison.OrdinalIgnoreCase))
+        {
+            _ctx.LoadValues(InitialState.Values);
+            _currentStepIndex = Math.Clamp(
+                InitialState.CurrentStepIndex, 0, ResolvedWorkflow!.Steps.Count - 1);
+        }
     }
 
-    private void OnContextChanged()
+    private async Task OnContextChanged()
     {
         if (_errors.Count > 0) RunValidation();
+        await NotifyStateChanged();
         StateHasChanged();
     }
 
-    private void Next()
+    private async Task Next()
     {
         if (!RunValidation()) return;
         _currentStepIndex++;
         _errors = new Dictionary<string, IReadOnlyList<string>>();
+        await NotifyStateChanged();
     }
 
-    private void Back()
+    private async Task Back()
     {
         if (_currentStepIndex > 0)
         {
             _currentStepIndex--;
             _errors = new Dictionary<string, IReadOnlyList<string>>();
+            await NotifyStateChanged();
         }
     }
 
@@ -288,7 +334,7 @@ else
     {
         if (!RunValidation()) return;
         _submitted = true;
-        await Task.CompletedTask;
+        await OnSubmit.InvokeAsync(_ctx.AllValues);
     }
 
     private bool RunValidation()
@@ -298,6 +344,11 @@ else
         _errors = ValidationService.ValidateStep(CurrentStep, _ctx, visible);
         return _errors.Count == 0;
     }
+
+    private Task NotifyStateChanged() =>
+        OnStateChanged.HasDelegate
+            ? OnStateChanged.InvokeAsync(_ctx.Snapshot(ResolvedWorkflow!.WorkflowKey, _currentStepIndex))
+            : Task.CompletedTask;
 
     private string GetItemLabelCapitalized(string fieldKey)
     {

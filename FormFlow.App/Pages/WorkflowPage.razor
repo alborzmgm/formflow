@@ -1,4 +1,36 @@
 @page "/workflow"
 @rendermode InteractiveServer
 
-<WorkflowViewer WorkflowFile="location-workflow.json" />
+<WorkflowViewer WorkflowFile="location-workflow.json"
+                InitialState="@_savedState"
+                OnStateChanged="@(s => _savedState = s)"
+                OnSubmit="@HandleSubmit" />
+
+@if (_savedState is not null)
+{
+    <div class="container py-2" style="max-width:760px">
+        <small class="text-muted">
+            <i class="bi bi-cloud-check me-1"></i>
+            Progress auto-saved — step @(_savedState.CurrentStepIndex + 1),
+            @_savedState.Values.Count field(s) collected.
+            <button class="btn btn-sm btn-link text-danger p-0 ms-2"
+                    @onclick="() => _savedState = null">
+                Clear saved progress
+            </button>
+        </small>
+    </div>
+}
+
+@code {
+    // In a real application, persist _savedState to a storage back-end (browser localStorage,
+    // a database, session state, etc.) so progress survives page refreshes.
+    // Here we keep it in memory purely to illustrate the save/restore API.
+    private FormFlowState? _savedState;
+
+    private Task HandleSubmit(IReadOnlyDictionary<string, object?> values)
+    {
+        // Forward `values` to your backend API or database here.
+        _savedState = null; // Clear saved progress after a successful submission.
+        return Task.CompletedTask;
+    }
+}
